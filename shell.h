@@ -2,4 +2,4 @@
 
 #include <stdio.h>
 
-int shell(FILE *in, FILE *out, FILE *err);
+int shell(FILE *in, FILE *out, FILE *err, int argc, char *argv[]);

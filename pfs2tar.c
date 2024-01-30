@@ -55,6 +55,7 @@ static int do_wrapped_ftw(path_info_t *pi, char *path, wrapped_ftw_callback fn)
                 }
                 path[j] = '/';
                 strcpy(path + j + 1, de.name);
+                printf("%s\r", path);
                 if ((r = do_wrapped_ftw(pi, path, fn))) {
                     iomanX_close(d);
                     return r;
@@ -162,6 +163,8 @@ static unsigned int convert_mode_to_posix(unsigned int iomanx_mode)
 enum TarHeader {
     NAME = 0,
     MODE = 100,
+    UID = 108,
+    GID = 116,
     SIZE = 124,
     MTIME = 136,
     CHK = 148,
@@ -169,8 +172,12 @@ enum TarHeader {
     LINK = 157,
     MAGIC = 257,
     VERS = 263,
+    UNAME = 265,
+    GNAME = 297,
+    DEVMAJOR = 329,
+    DEVMINOR = 337,
     NAME2 = 345,
-    END = 512
+    END = 500 // ?? 512
 };
 
 static void tar_checksum(const char b[END], char *chk)
@@ -183,39 +190,55 @@ static void tar_checksum(const char b[END], char *chk)
 
 static FILE *tarfile_handle = NULL;
 
+/**
+ * Function to tar a file
+ *
+ * @param pi - path_info_t pointer
+ * @param in_path - input file path
+ * @param st - iox_stat_t pointer
+ * @return int - 0 on success
+ */
 static int tar_c_file(path_info_t *pi, const char *in_path, const iox_stat_t *st)
 {
-    int l = END;
-    char b[END] = {0};
-    int f = -1;
-    int pathlen;
-    char path[512];
+    int l = END;       // Initialize l
+    char b[END] = {0}; // Initialize b array
+    int f = -1;        // Initialize f
+    int pathlen;       // Initialize pathlen
+    char path[512];    // Initialize path array
 
     /* TODO: pax header for longer filenames and larger files */
     /* https://pubs.opengroup.org/onlinepubs/9699919799/utilities/pax.html#tag_20_92_13 */
 
+    // Check if file is regular and size is within limits
     if ((FIO_S_ISREG(st->mode)) && (st->hisize != 0)) {
+        printf("(!) %s: too large file. Skipping.\n", in_path); // Print message for large file
         /* The file is over 4GB, which we don't support (currently) */
         return 0;
     }
 
+    // Construct full path
     snprintf(path, sizeof(path), "%s%s", pi->path_prefix, in_path + pi->orig_len);
 
-    pathlen = strlen(path);
+    pathlen = strlen(path); // Get length of path
 
+    // Check for empty path
     if (pathlen == 0) {
+        printf("(!) %s: invalid path. Skipping.\n", in_path); // Print message for invalid path
         /* We don't need to archive the root */
         return 0;
     }
 
+    // Set ustar magic and version
     memset(b + SIZE, '0', 11);
     memcpy(b + MAGIC, "ustar\x00", 6);
     memcpy(b + VERS, "00", 2);
+
+    // Check for long path
     if (pathlen > 100) {
-        char *path_separate = strchr(path, '/');
+        const char *path_separate = strchr(path, '/');
 
         if (path_separate == NULL) {
-            /* Path is too long */
+            printf("(!) %s: path is too long. Skipping.\n", in_path); // Print message for long path
             return 0;
         }
 
@@ -223,7 +246,7 @@ static int tar_c_file(path_info_t *pi, const char *in_path, const iox_stat_t *st
             if (*path_separate == '\x00') {
                 break;
             }
-            char *new_path_separate = strchr(path_separate + 1, '/');
+            const char *new_path_separate = strchr(path_separate + 1, '/');
             if (new_path_separate == NULL) {
                 break;
             }
@@ -234,6 +257,7 @@ static int tar_c_file(path_info_t *pi, const char *in_path, const iox_stat_t *st
         }
 
         if ((path_separate - path) >= 155) {
+            printf("(!) %s: path is too long. Skipping.\n", in_path); // Print message for long path
             /* Path is too long */
             return 0;
         }
@@ -241,16 +265,21 @@ static int tar_c_file(path_info_t *pi, const char *in_path, const iox_stat_t *st
         {
             int prefix_pathlen = path_separate - path;
 
+            // Set prefix path and name in header
             memcpy(b + NAME2, path, prefix_pathlen);
             memcpy(b + NAME, path + prefix_pathlen, pathlen - prefix_pathlen);
         }
 
     } else {
+        // Set path in header
         memcpy(b + NAME, path, pathlen);
     }
+
+    // Set mode and modification time in header
     snprintf(b + MODE, 8, "%.7o", (unsigned int)(convert_mode_to_posix(st->mode)));
     snprintf(b + MTIME, 12, "%.11o", (unsigned int)(convert_iox_stat_time_to_posix(st->mtime)));
 
+    // Process based on file type
     if (FIO_S_ISREG(st->mode)) {
         b[TYPE] = '0';
         snprintf(b + SIZE, 12, "%.11o", (unsigned int)(st->size));
@@ -261,7 +290,7 @@ static int tar_c_file(path_info_t *pi, const char *in_path, const iox_stat_t *st
         b[TYPE] = '2';
         iomanX_readlink(in_path, b + LINK, 100);
     }
-    tar_checksum(b, b + CHK);
+    tar_checksum(b, b + CHK); // Calculate checksum
     do {
         if (l < END) {
             memset(b + l, 0, END - l);
@@ -292,6 +321,7 @@ static int tar_part(void)
                     continue;
                 }
 
+                printf("\rpartition: %s                                                \n", de.name);
                 snprintf(prefix_path, sizeof(prefix_path), "%s/", de.name);
                 wrapped_ftw(prefix_path, IOMANX_MOUNT_POINT "/", tar_c_file);
 

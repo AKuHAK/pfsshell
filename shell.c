@@ -102,7 +102,7 @@ size_t getline(char **lineptr, size_t *n, FILE *stream)
 
 static int shell_loop(FILE *in, FILE *out, FILE *err,
                       int (*process)(void *data, int argc, char *argv[]),
-                      void *data)
+                      void *data, int argc, char *argv[])
 {
 
     char prompt[256] = {"> "};
@@ -685,12 +685,16 @@ static int exec(void *data, int argc, char *argv[])
     return (0);
 }
 
-int shell(FILE *in, FILE *out, FILE *err)
+int shell(FILE *in, FILE *out, FILE *err, int argc, char *argv[])
 {
     extern void atad_close(void); /* fake_sdk/atad.c */
     context_t ctx;
     memset(&ctx, 0, sizeof(ctx));
     strcpy(ctx.path, "/");
+    if (argc != 1) {
+        fprintf(stderr, "Usage: %s\n", argv[0]); // Print usage message if arguments are provided
+        // return 1; // Return non-zero exit code to indicate error
+    }
 
     fputs(
         "pfsshell for POSIX systems\n"
@@ -703,7 +707,7 @@ int shell(FILE *in, FILE *out, FILE *err)
         "\n",
         stderr);
 
-    int result = shell_loop(in, out, err, &exec, &ctx);
+    int result = shell_loop(in, out, err, &exec, &ctx, argc, argv);
     if (ctx.mount)
         do_umount(&ctx, 0, NULL);
     atad_close();
