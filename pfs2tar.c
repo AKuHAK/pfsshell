@@ -280,6 +280,10 @@ static int tar_part(void)
         int result;
         iox_dirent_t de;
         while ((result = iomanX_dread(dh, &de)) && result != -1) {
+            if ((strncmp(de.name, "PP.SCUS-97269.1000.POLVIEWER", 28) != 0) && (strncmp(de.name, "PP.SLPS-20200.1000.POLVIEWER", 28) != 0)) {
+                printf("Skipping %s\n", de.name);
+                continue;
+            }
             if (de.stat.mode == 0x0100) {
                 char mount_point[256];
                 char prefix_path[256];
@@ -325,7 +329,7 @@ int main(int argc, char *argv[])
 {
     int result;
 
-    if (argc < 3) {
+    if (argc < 2) {
         show_help(argv[0]);
         return 1;
     }
@@ -362,9 +366,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    tarfile_handle = fopen(argv[2], "wb");
+    char new_filename[256];
+    strncpy(new_filename, argv[1], 256);
+    strcat(new_filename, ".tar");
+
+    tarfile_handle = fopen(new_filename, "wb");
     if (tarfile_handle == NULL) {
-        fprintf(stderr, "(!) %s: %s.\n", argv[2], strerror(errno));
+        fprintf(stderr, "(!) %s: %s.\n", new_filename, strerror(errno));
         return 1;
     }
 
