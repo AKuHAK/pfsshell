@@ -405,10 +405,7 @@ static int apaRemove(s32 device, const char *id, const char *fpwd)
                 return -EBUSY;
         }
     }
-#if 0
-    if (id[0] == '_' && id[1] == '_')
-        return -EACCES;
-#endif
+
     if ((clink = apaFindPartition(device, id, &rv)) == NULL)
         return rv;
     if (apaPassCmp(clink->header->fpwd, fpwd)) {
@@ -436,13 +433,13 @@ static int apaRemove(s32 device, const char *id, const char *fpwd)
 }
 
 // Unofficial helper for renaming APA partitions.
-static int apaRename(s32 device, const apa_params_t *oldParams, const apa_params_t *newParams)
+static int apaRename(s32 device, const char *oldId, const char *newId)
 {
     apa_cache_t *clink;
     int i, rv;
 
     // look to see if can make(newname) or not...
-    if ((clink = apaFindPartition(device, newParams->id, &rv)) != NULL) {
+    if ((clink = apaFindPartition(device, newId, &rv)) != NULL) {
         apaCacheFree(clink);
         SignalSema(fioSema);
         return -EEXIST; // File exists
@@ -451,35 +448,24 @@ static int apaRename(s32 device, const apa_params_t *oldParams, const apa_params
     // look to see if open(oldname)
     for (i = 0; i < apaMaxOpen; i++) {
         if (hddFileSlots[i].f != NULL) {
-            if (memcmp(hddFileSlots[i].id, oldParams->id, APA_IDMAX) == 0) {
+            if (memcmp(hddFileSlots[i].id, oldId, APA_IDMAX) == 0) {
                 SignalSema(fioSema);
                 return -EBUSY;
             }
         }
     }
 
-    // Do not allow system partitions (__*) to be renamed.
-    if (oldParams->id[0] == '_' && oldParams->id[1] == '_')
-        return -EACCES;
-
     // find :)
-    if ((clink = apaFindPartition(device, oldParams->id, &rv)) == NULL) {
+    if ((clink = apaFindPartition(device, oldId, &rv)) == NULL) {
         SignalSema(fioSema);
         return rv;
     }
 
-    // Check for access rights.
-    if (apaPassCmp(clink->header->fpwd, oldParams->fpwd) != 0) {
-        apaCacheFree(clink);
-        return -EACCES;
-    }
-
     // do the renaming :) note: subs have no names!!
-    memcpy(clink->header->id, newParams->id, APA_IDMAX);
-
-    // Update passwords
-    memcpy(clink->header->rpwd, newParams->rpwd, APA_PASSMAX);
-    memcpy(clink->header->fpwd, newParams->fpwd, APA_PASSMAX);
+    strncpy(clink->header->id, newId, APA_IDMAX);
+    clink->header->id[APA_IDMAX - 1] = '\0'; // Ensure null-termination
+    apaGetTime(&clink->header->created);
+    clink->header->checksum = apaCheckSum(clink->header);
 
     clink->flags |= APA_CACHE_FLAG_DIRTY;
 
@@ -689,17 +675,10 @@ int hddDread(iop_file_t *f, iox_dirent_t *dirent)
     System partitions (__*) cannot be renamed.	*/
 int hddReName(iop_file_t *f, const char *oldname, const char *newname)
 {
-    apa_params_t oldParams;
-    apa_params_t newParams;
     int rv;
 
-    if ((rv = fioGetInput(oldname, &oldParams)) < 0)
-        return rv;
-    if ((rv = fioGetInput(newname, &newParams)) < 0)
-        return rv;
-
     WaitSema(fioSema);
-    rv = apaRename(f->unit, &oldParams, &newParams);
+    rv = apaRename(f->unit, oldname, newname);
     SignalSema(fioSema);
 
     return rv;
