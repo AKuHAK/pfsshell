@@ -126,7 +126,7 @@ apa_cache_t *hddAddPartitionHere(s32 device, const apa_params_t *params, u32 *em
     tempSize = params->size;
     while (part_end % params->size) {
         tempSize = params->size >> 1;
-        while (0x3FFFF < tempSize) {
+        while (0x3FFF < tempSize) {
             if (!(part_end % tempSize)) {
                 clink_new = apaRemovePartition(device, part_end, 0,
                                                clink_this->header->start, tempSize);
