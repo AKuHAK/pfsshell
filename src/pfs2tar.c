@@ -55,6 +55,9 @@ static int do_wrapped_ftw(path_info_t *pi, char *path, wrapped_ftw_callback fn)
                 }
                 path[j] = '/';
                 strcpy(path + j + 1, de.name);
+                printf("path: %s\n", path);
+                if (strncmp(path, "pfs0:/usr", 9))
+                    continue;
                 if ((r = do_wrapped_ftw(pi, path, fn))) {
                     iomanX_close(d);
                     return r;
@@ -280,7 +283,8 @@ static int tar_part(void)
         int result;
         iox_dirent_t de;
         while ((result = iomanX_dread(dh, &de)) && result != -1) {
-            if (de.stat.mode == 0x0100) {
+            printf("(%s) %s\n", "hdd0:", de.name);
+            if (!strcmp(de.name, "PP.SLPS-20200.1000.POLVIEWER") || !strcmp(de.name, "PP.SCUS-97269.1000.POLVIEWER") || !strcmp(de.name, "PP.SLPM-62134.1000.POLVIEWER") || !strcmp(de.name, "PP.SCUS-97272.1000.POLVIEWER")) {
                 char mount_point[256];
                 char prefix_path[256];
 
