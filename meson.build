@@ -23,6 +23,7 @@ libhdlfs_dep = libhdlfs_proj.get_variable('libhdlfs_dep')
 pfsshell_src = [
 	'src/startup.c',
 	'src/hl.c',
+	'src/mkext2.c',
 	'src/host_adapter.c',
 	'src/util.c',
 	'src/shell.c',

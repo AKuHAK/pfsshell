@@ -74,21 +74,21 @@ pfs: Format sub: sub = 0, sector start = 8208, sector end = 8239\r
 # "
 
 run_cmd "ls partitions" "ls" "-exact" "
-__mbr\r
-__net/\r
-__system/\r
-__sysconf/\r
-__common/\r
+   0.12 GiB  __mbr\r
+   0.12 GiB  __net/\r
+   0.25 GiB  __system/\r
+   0.50 GiB  __sysconf/\r
+   1.00 GiB  __common/\r
 # "
 
 run_cmd "mkpart" "mkpart PP.TEST 128M PFS" "-exact" "# "
 run_cmd "mkpart" "ls" "-exact" "
-__mbr\r
-__net/\r
-__system/\r
-__sysconf/\r
-__common/\r
-PP.TEST/\r
+   0.12 GiB  __mbr\r
+   0.12 GiB  __net/\r
+   0.25 GiB  __system/\r
+   0.50 GiB  __sysconf/\r
+   1.00 GiB  __common/\r
+   0.12 GiB  PP.TEST/\r
 # "
 
 run_cmd "mount" "mount __net" "-exact" "__net:/# "
@@ -111,14 +111,30 @@ run_cmd "get" "get pfsshell.md" "-exact" "__net:/# "
 run_cmd "rm" "rm pfsshell.md" "-exact" "__net:/# "
 run_cmd "rmdir" "rmdir directory" "-exact" "__net:/# "
 run_cmd "umount" "umount" "-exact" "# "
+run_cmd "mkpart" "mkpart __linux.2 128M EXT2SWAP" "-exact" "
+Main partition of 128M created.\r
+MKEXT2: Formatting hdd0:__linux.2 as SWAP...\r
+MKEXT2: Usable size: 124.00 MB (253952 sectors)\r
+SWAP partition format done (Header only).\r
+# "
+run_cmd "mkpart" "mkpart __linux.1 56M EXT2" "-exact" "
+Main partition of 32M created.\r
+Sub partition of 16M created.\r
+Sub partition of 8M created.\r
+MKEXT2: Opening hdd0:__linux.1...\r
+MKEXT2: Usable size: 51.99 MB (106480 sectors)\r
+EXT2 partition format done.\r
+# "
 run_cmd "rmpart" "rmpart __net" "-exact" "# "
 run_cmd "rmpart" "ls" "-exact" "
-__mbr\r
-__empty%\r
-__system/\r
-__sysconf/\r
-__common/\r
-PP.TEST/\r
+   0.12 GiB  __mbr\r
+   0.12 GiB  __empty%\r
+   0.25 GiB  __system/\r
+   0.50 GiB  __sysconf/\r
+   1.00 GiB  __common/\r
+   0.12 GiB  PP.TEST/\r
+   0.12 GiB  __linux.1\r
+   0.12 GiB  __linux.2\r
 # "
 
 run_cmd "exit" "exit" eof ""

@@ -407,7 +407,7 @@ static int do_mkpart(context_t *ctx, int arg, char *argv[])
         }
     }
 
-    if (i < 0) { // dont create smaller then 128MB Main partition
+    if (i < 0) { // dont create smaller than 8MB Main partition
         fprintf(stderr, "%s: too small partition size.\n", argv[2]);
         return (-1);
     }
@@ -427,9 +427,14 @@ static int do_mkpart(context_t *ctx, int arg, char *argv[])
 
     if (result >= 0) {
         (void)iomanX_close(partfd), result = 0;
-        if (result >= 0)
+        if (result >= 0) {
             if (strncmp(part_type, "PFS", 3) == 0)
                 result = mkpfs(argv[1]);
+            else if (strncmp(part_type, "EXT2SWAP", 8) == 0)
+                result = mkswap(argv[1]);
+            else if (strncmp(part_type, "EXT2", 4) == 0)
+                result = mkext2(argv[1]);
+        }
     }
 
     if (result < 0)
@@ -691,10 +696,10 @@ static int do_help(context_t *ctx, int argc, char *argv[])
         "lcd [path] - print/change the local working directory\n"
         "device <device> - use this PS2 HDD;\n"
         "initialize - blank and create APA/PFS on a new PS2 HDD (destructive);\n"
-        "mkpart <part_name> <size> <fstype> - create a new PFS formatted partition;\n"
+        "mkpart <part_name> <size> <fstype> - create a new partition;\n"
         "\tSize must end with M or G literal (like 384M or 3G);\n"
         "\tAcceptable fs types: {PFS, CFS, HDL, REISER, EXT2, EXT2SWAP, MBR};\n"
-        "\tOnly fs type PFS will format partition, other partitions should be formatted by another utilities;\n"
+        "\tOnly fs type PFS, EXT2 and EXT2SWAP will format partition, other partitions should be formatted by another utilities;\n"
         "mount <part_name> - mount a partition;\n"
         "umount - un-mount a partition;\n"
         "ls [-l] - no mount: list partitions; mount: list files/dirs; -l: verbose list;\n"

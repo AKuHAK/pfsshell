@@ -16,7 +16,13 @@ int lspart(int lsmode);
 /* create PFS onto an existing partition */
 int mkpfs(const char *mount_point);
 
-/* create partition of any type and format it as PFS if type=0x0100;
+/* create EXT2 onto an existing partition */
+int mkext2(const char *mount_point);
+
+/* create EXT2SWAP onto an existing partition */
+int mkswap(const char *mount_point);
+
+/* create partition of any type and format it as PFS if type=0x0100; or if type EXT2
  * so far the only sizes supported are powers of 2 */
 int mkpart(const char *mount_point, long size_in_mb, int format);
 

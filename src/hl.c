@@ -8,6 +8,7 @@
 #endif
 
 #include "iomanX_port.h"
+#include "mkext2.h"
 
 
 /* copy file, host to PFS */
@@ -289,8 +290,19 @@ int mkpfs(const char *mount_point)
                           (void *)&format_arg, sizeof(format_arg)));
 }
 
+/* create EXT2 onto an existing partition */
+int mkext2(const char *mount_point)
+{
+    return format_ext2_partition(mount_point);
+}
 
-/* create partition of any type and format it as PFS if type=0x0100 */
+/* create EXT2SWAP onto an existing partition */
+int mkswap(const char *mount_point)
+{
+    return format_swap_partition(mount_point);
+}
+
+/* create partition of any type and format it as PFS if type=0x0100 or EXT2 if type=0x0083 */
 int mkpart(const char *mount_point, long size_in_mb, int format)
 {
     char tmp[256];
@@ -302,8 +314,12 @@ int mkpart(const char *mount_point, long size_in_mb, int format)
     if (result >= 0) {
         iomanX_close(result), result = 0;
 
-        if (format)
+        if (format == 0x0100) // PFS
             result = mkpfs(mount_point);
+        else if (format == 0x0083) // EXT2
+            result = mkext2(mount_point);
+        else if (format == 0x0082) // EXT2SWAP
+            result = mkswap(mount_point);
     }
     return (result);
 }
