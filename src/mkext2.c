@@ -392,7 +392,7 @@ int format_ext2_partition(const char *mount_point)
     uint32_t block_size = 4096;
     uint32_t sector_per_block = block_size / 512;
     uint32_t blocks_count = partition_size_sectors / sector_per_block;
-    uint32_t inodes_per_group = 2048;
+    uint32_t inodes_per_group = 8192;
     uint32_t blocks_per_group = block_size * 8; // 32768
 
     uint32_t groups_count = (blocks_count + blocks_per_group - 1) / blocks_per_group;
