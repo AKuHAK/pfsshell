@@ -7,3 +7,4 @@
 [submodule "external/ps2sdk"]
 	path = external/ps2sdk
 	url = https://github.com/ps2dev/ps2sdk.git
+	branch = master
