@@ -1,0 +1,19 @@
+device /Users/imac/Desktop/HDD/POLgJ/po.raw
+df
+quit
+
+device /Users/imac/Desktop/HDD/ps2-hdd_7z/dirge2006.raw
+mount 8
+df
+quit
+mount PP.SLPM-65981.0004.FMO
+df
+quit
+df
+quit
+ls
+quit
+mkpart 3 2G PFS
+rmpart 3
+ls -l
+quit

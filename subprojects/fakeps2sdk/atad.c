@@ -94,8 +94,11 @@ int set_atad_device_handle(int fd)
 
 void set_atad_device_path(const char *path)
 {
-    int fd;
-    fd = open(path, O_RDWR | O_BINARY);
+#ifdef __linux__
+    int fd = open(path, O_RDWR | O_BINARY | O_DIRECT);
+#else
+    int fd = open(path, O_RDWR | O_BINARY);
+#endif
     if (fd == -1 || set_atad_device_handle(fd)) {
         perror(path), exit(1);
     }
