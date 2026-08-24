@@ -32,14 +32,17 @@ static int do_wrapped_ftw(path_info_t *pi, char *path, wrapped_ftw_callback fn)
 {
     size_t l = strlen(path), j = l && path[l - 1] == '/' ? l - 1 : l;
     iox_stat_t st;
-    int r;
 
+    // 1. Пытаемся получить статы. Если ошибка - ругаемся, но ИДЕМ ДАЛЬШЕ (return 0)
     if (iomanX_getstat(path, &st) < 0) {
-        return -1;
+        fprintf(stderr, "\n(!) Warning: iomanX_getstat failed for %s. Skipping.\n", path);
+        return 0; 
     }
 
-    if ((r = fn(pi, path, &st))) {
-        return r;
+    // 2. Вызов коллбека упаковки tar
+    if (fn(pi, path, &st) != 0) {
+        fprintf(stderr, "\n(!) Warning: Tar callback failed for %s. Skipping.\n", path);
+        return 0; 
     }
 
     if (FIO_S_ISDIR(st.mode)) {
@@ -51,29 +54,42 @@ static int do_wrapped_ftw(path_info_t *pi, char *path, wrapped_ftw_callback fn)
             while ((result = iomanX_dread(d, &de)) && result != -1) {
                 if (de.name[0] == '.' && (!de.name[1] || (de.name[1] == '.' && !de.name[2])))
                     continue;
-                if (strlen(de.name) >= IOMANX_PATH_MAX - l) {
-                    iomanX_close(d);
-                    return -1;
+
+                // ФИКС: Явно пропускаем фантомные точки монтирования (pfs1:, pfs2: и т.д.)
+                if (strncmp(de.name, "pfs", 3) == 0 && strchr(de.name, ':') != NULL) {
+                    fprintf(stderr, "\n(!) Skipping phantom mount point: %s\n", de.name);
+                    continue;
                 }
+
+                if (strlen(de.name) >= IOMANX_PATH_MAX - l) {
+                    fprintf(stderr, "\n(!) Warning: Path too long for %s. Skipping.\n", de.name);
+                    continue;
+                }
+                
                 path[j] = '/';
                 strcpy(path + j + 1, de.name);
                 printf("\r\033[K     %s", path);
                 fflush(stdout);
-                if ((r = do_wrapped_ftw(pi, path, fn))) {
-                    iomanX_close(d);
-                    return r;
-                }
+                
+                // РЕКУРСИЯ: Игнорируем код возврата, чтобы дочерняя ошибка не убила родительский цикл
+                do_wrapped_ftw(pi, path, fn);
             }
+            
+            if (result == -1) {
+                fprintf(stderr, "\n(!) Warning: Directory read error in %s.\n", path);
+            }
+            
             printf("\r\033[K");
             iomanX_close(d);
         } else {
-            return -1;
+            fprintf(stderr, "\n(!) Warning: iomanX_dopen failed for %s. Skipping.\n", path);
         }
     }
 
     path[l] = 0;
 
-    return 0;
+    // ГЛАВНЫЙ ФИКС: Всегда возвращаем успех, чтобы обход дерева никогда не прерывался
+    return 0; 
 }
 
 static int wrapped_ftw(const char *path_prefix, const char *path, wrapped_ftw_callback fn)
