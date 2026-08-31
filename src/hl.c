@@ -113,7 +113,7 @@ int list_dir_objects(int dh, int lsmode)
     iox_dirent_t dirent;
     char end_symbol[2];
     end_symbol[1] = '\0';
-    while ((result = iomanX_dread(dh, &dirent)) && result != -1) {
+    while ((result = iomanX_dread(dh, &dirent)) > 0) {
         char mode[10 + 1] = {'\0'}; /* unix-style */
         const int m = dirent.stat.mode;
         switch (m & FIO_S_IFMT) { /* item type */
@@ -177,7 +177,7 @@ int lspart(int lsmode)
         iox_dirent_t dirent;
         if (lsmode == 1)
             printf("Start (sector)       Code    Slice         Size   Timestamp         Name\n");
-        while ((result = iomanX_dread(dh, &dirent)) && result != -1) {
+        while ((result = iomanX_dread(dh, &dirent)) > 0) {
 
             // Equal to, but avoids overflows of: size * 512 / 1024 / 1024;
             uint32_t size = dirent.stat.size / 2048;

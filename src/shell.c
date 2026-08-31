@@ -171,7 +171,7 @@ static int do_df(context_t *ctx, int argc, char *argv[])
             fprintf(stderr, "(!) Unable to open %s: %s.\n", tmp, strerror(-dh));
             return (dh);
         }
-        while ((result = iomanX_dread(dh, &dirent)) && result != -1) {
+        while ((result = iomanX_dread(dh, &dirent)) > 0) {
             if (dirent.stat.mode != 0x0000 && dirent.stat.attr == 0) {
                 used_sectors += dirent.stat.private_1;
             }
