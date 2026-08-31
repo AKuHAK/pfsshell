@@ -1,7 +1,7 @@
 #include "shell.h"
 
 
-int main(void)
+int main(int argc, char *argv[])
 {
-    return (shell(stdin, stdout, stderr));
+    return (shell_main(argc, argv, stdin, stdout, stderr));
 }

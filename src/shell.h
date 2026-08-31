@@ -3,3 +3,4 @@
 #include <stdio.h>
 
 int shell(FILE *in, FILE *out, FILE *err);
+int shell_main(int argc, char *argv[], FILE *in, FILE *out, FILE *err);

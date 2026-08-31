@@ -106,8 +106,14 @@ static int shell_loop(FILE *in, FILE *out, FILE *err,
                       int (*process)(void *data, int argc, char *argv[]),
                       void *data)
 {
-
+    context_t *ctx = (context_t *)data;
     char prompt[256] = {"> "};
+    if (ctx->setup) {
+        if (ctx->mount)
+            sprintf(prompt, "%s:%s# ", strchr(ctx->mount_point, ':') + 1, ctx->path);
+        else
+            sprintf(prompt, "# ");
+    }
     char *line = NULL;
     size_t len = 0;
 
@@ -770,7 +776,7 @@ static int exec(void *data, int argc, char *argv[])
     return (0);
 }
 
-int shell(FILE *in, FILE *out, FILE *err)
+int shell_main(int argc, char *argv[], FILE *in, FILE *out, FILE *err)
 {
     extern void atad_close(void); /* fake_sdk/atad.c */
     context_t ctx;
@@ -788,9 +794,28 @@ int shell(FILE *in, FILE *out, FILE *err)
         "\n",
         stderr);
 
+    if (argc > 1) {
+        const char *dev_path = argv[1];
+        if ((!strcmp(dev_path, "-d") || !strcmp(dev_path, "--device")) && argc > 2) {
+            dev_path = argv[2];
+        }
+        char *dev_argv[2];
+        dev_argv[0] = "device";
+        dev_argv[1] = (char *)dev_path;
+        int dev_res = do_device(&ctx, 2, dev_argv);
+        if (dev_res != 0) {
+            fprintf(err, "(!) Failed to open device: %s\n", dev_path);
+        }
+    }
+
     int result = shell_loop(in, out, err, &exec, &ctx);
     if (ctx.mount)
         do_umount(&ctx, 0, NULL);
     atad_close();
     return (result);
+}
+
+int shell(FILE *in, FILE *out, FILE *err)
+{
+    return shell_main(0, NULL, in, out, err);
 }
